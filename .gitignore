@@ -13,6 +13,13 @@ venv/
 .venv/
 *.egg-info/
 
+# Node
+node_modules/
+frontend/dist/
+
+# Data
+backend/data/
+
 # IDE
 .idea/
 .vscode/
