@@ -121,3 +121,98 @@ async def voice_command(req: VoiceCommandRequest):
 @app.get("/api/preferences")
 async def get_preferences():
     return preference_store.get_all()
+
+
+# ── bunq integration ──
+
+from services import bunq_service
+
+
+@app.post("/api/bunq/init")
+async def bunq_init():
+    try:
+        bunq_service.get_client()
+        info = bunq_service.get_account_info()
+        return {"status": "connected", "account": info}
+    except Exception as e:
+        raise HTTPException(500, f"bunq init failed: {str(e)}")
+
+
+@app.post("/api/bunq/request-test-money")
+async def bunq_request_test_money():
+    try:
+        bunq_service.request_sandbox_money()
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/bunq/account")
+async def bunq_account():
+    try:
+        return bunq_service.get_account_info()
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ── Flatmates ──
+
+class FlatmateRequest(BaseModel):
+    name: str
+    email: str
+
+
+@app.get("/api/flatmates")
+async def get_flatmates():
+    return bunq_service.get_flatmates()
+
+
+@app.post("/api/flatmates")
+async def add_flatmate(req: FlatmateRequest):
+    return bunq_service.add_flatmate(req.name, req.email)
+
+
+@app.delete("/api/flatmates/{email}")
+async def remove_flatmate(email: str):
+    if not bunq_service.remove_flatmate(email):
+        raise HTTPException(404, "Flatmate not found")
+    return {"status": "removed"}
+
+
+# ── Payment requests ──
+
+class PaymentRequestBody(BaseModel):
+    receipt_id: str
+    flatmate_emails: list[str]
+
+
+@app.post("/api/request-payments")
+async def request_payments(req: PaymentRequestBody):
+    receipt = receipt_store.get(req.receipt_id)
+    if not receipt:
+        raise HTTPException(404, "Receipt not found")
+    if not receipt.get("confirmed"):
+        raise HTTPException(400, "Confirm the split first")
+
+    per_person = receipt.get("per_person", 0)
+    if per_person <= 0:
+        raise HTTPException(400, "Nothing to request")
+
+    flatmates = bunq_service.get_flatmates()
+    fm_map = {f["email"].lower(): f for f in flatmates}
+
+    results = []
+    for email in req.flatmate_emails:
+        fm = fm_map.get(email.lower())
+        if not fm:
+            results.append({"email": email, "error": "Flatmate not found"})
+            continue
+        try:
+            amount_str = f"{per_person:.2f}"
+            desc = f"SplitSmart: {receipt['store_name']} — your share ({receipt.get('currency', '€')}{amount_str})"
+            result = bunq_service.send_payment_request(fm["email"], fm["name"], amount_str, desc)
+            results.append({**result, "status": "sent"})
+        except Exception as e:
+            results.append({"email": email, "error": str(e)})
+
+    return {"results": results, "per_person": per_person}

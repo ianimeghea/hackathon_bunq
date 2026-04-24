@@ -7,7 +7,7 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
     echo "ERROR: AWS credentials not set."
     echo "Export them before running:"
     echo ""
-    echo '  export AWS_DEFAULT_REGION="us-east-1"'
+    echo '  export AWS_DEFAULT_REGION="eu-central-1"'
     echo '  export AWS_ACCESS_KEY_ID="..."'
     echo '  export AWS_SECRET_ACCESS_KEY="..."'
     echo '  export AWS_SESSION_TOKEN="..."'
@@ -15,9 +15,15 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
     exit 1
 fi
 
-echo "AWS credentials detected (region: ${AWS_DEFAULT_REGION:-us-east-1})"
+echo "AWS credentials detected (region: ${AWS_DEFAULT_REGION:-eu-central-1})"
 
-mkdir -p backend/data/receipts
+if [ -n "$BUNQ_API_KEY" ]; then
+    echo "bunq API key detected"
+else
+    echo "No BUNQ_API_KEY set — will auto-create sandbox user"
+fi
+
+mkdir -p backend/data/receipts backend/data/chats
 
 echo "[1/4] Installing backend dependencies..."
 pip install -r backend/requirements.txt -q
@@ -43,7 +49,8 @@ echo "  Frontend: http://localhost:5173"
 echo "  Backend:  http://localhost:8000"
 echo "  API docs: http://localhost:8000/docs"
 echo ""
-echo "  AI: Claude Opus 4.7 on AWS Bedrock"
+echo "  AI:   Claude Opus 4.6 on AWS Bedrock"
+echo "  Bank: bunq (sandbox)"
 echo ""
 echo "Press Ctrl+C to stop."
 

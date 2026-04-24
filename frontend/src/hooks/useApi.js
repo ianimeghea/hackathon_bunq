@@ -54,8 +54,32 @@ export function useApi() {
 
   const getPreferences = useCallback(() => request('/api/preferences'), [request]);
 
+  // bunq
+  const initBunq = useCallback(() => request('/api/bunq/init', { method: 'POST' }), [request]);
+  const getBunqAccount = useCallback(() => request('/api/bunq/account'), [request]);
+  const requestTestMoney = useCallback(() => request('/api/bunq/request-test-money', { method: 'POST' }), [request]);
+
+  // flatmates
+  const getFlatmates = useCallback(() => request('/api/flatmates'), [request]);
+  const addFlatmate = useCallback((name, email) => request('/api/flatmates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email }),
+  }), [request]);
+  const removeFlatmate = useCallback((email) => request(`/api/flatmates/${encodeURIComponent(email)}`, { method: 'DELETE' }), [request]);
+
+  // payment requests
+  const requestPayments = useCallback((receiptId, flatmateEmails) => request('/api/request-payments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ receipt_id: receiptId, flatmate_emails: flatmateEmails }),
+  }), [request]);
+
   return {
     loading, error, setError,
     uploadReceipt, confirmSplit, getReceipts, getReceipt, deleteReceipt, voiceCommand, getPreferences,
+    initBunq, getBunqAccount, requestTestMoney,
+    getFlatmates, addFlatmate, removeFlatmate,
+    requestPayments,
   };
 }
