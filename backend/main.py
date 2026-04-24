@@ -126,6 +126,7 @@ async def get_preferences():
 # ── bunq integration ──
 
 from services import bunq_service
+from services.payment_store import payment_store
 
 
 @app.post("/api/bunq/init")
@@ -206,13 +207,26 @@ async def request_payments(req: PaymentRequestBody):
         fm = fm_map.get(email.lower())
         if not fm:
             results.append({"email": email, "error": "Flatmate not found"})
+            payment_store.add(req.receipt_id, receipt["store_name"], email, email, per_person, "failed")
             continue
         try:
             amount_str = f"{per_person:.2f}"
             desc = f"SplitSmart: {receipt['store_name']} — your share ({receipt.get('currency', '€')}{amount_str})"
             result = bunq_service.send_payment_request(fm["email"], fm["name"], amount_str, desc)
             results.append({**result, "status": "sent"})
+            payment_store.add(req.receipt_id, receipt["store_name"], fm["email"], fm["name"], per_person, "sent", result.get("request_id"))
         except Exception as e:
             results.append({"email": email, "error": str(e)})
+            payment_store.add(req.receipt_id, receipt["store_name"], fm["email"], fm["name"], per_person, "failed")
 
     return {"results": results, "per_person": per_person}
+
+
+@app.get("/api/payments")
+async def get_payments():
+    return payment_store.get_all()
+
+
+@app.get("/api/payments/stats")
+async def get_payment_stats():
+    return payment_store.get_stats()

@@ -9,7 +9,7 @@ client = anthropic.AnthropicBedrock(
 
 SYSTEM = """You are a voice assistant for a receipt splitting app. The user is reviewing a list of receipt items, each categorized as "shared" (household) or "personal" (individual).
 
-The user will speak a command to change item categories. Your job is to interpret what they want and return the updated items list.
+The user will speak a command to change item categories or remove items. Your job is to interpret what they want and return the updated items list.
 
 Examples of commands the user might say:
 - "Make the shampoo personal"
@@ -19,27 +19,32 @@ Examples of commands the user might say:
 - "Make all the drinks personal"
 - "The cleaning supplies should be shared"
 - "Split the milk as shared"
+- "Remove the shampoo"
+- "Delete the beer and the chips"
+- "Take out the energy drink"
+- "Get rid of that last item"
 - "Everything is fine" (no changes)
 
 Return ONLY valid JSON with this format:
 {
   "understood": true,
   "summary": "Short description of what you changed",
-  "items": [ ...the full updated items list with categories changed as requested... ]
+  "items": [ ...the full updated items list... ]
 }
 
-If you cannot understand the command or it doesn't relate to changing categories:
+If you cannot understand the command:
 {
   "understood": false,
-  "summary": "I didn't understand that. Try saying something like 'make the shampoo personal' or 'the beer should be personal'.",
+  "summary": "I didn't understand that. Try saying something like 'make the shampoo personal' or 'remove the beer'.",
   "items": [ ...return items unchanged... ]
 }
 
 Rules:
 - Match items by name loosely — "shampoo" should match "Head & Shoulders Shampoo"
 - You can match multiple items at once — "all the drinks" should match all beverage items
-- Only change the "category" field — never modify name, price, or confidence
-- Return ALL items, not just the changed ones"""
+- For category changes: only change the "category" field — never modify name, price, or confidence
+- For removals: OMIT the removed items from the returned list entirely
+- Return ALL remaining items, not just the changed ones"""
 
 
 def interpret_voice_command(transcript: str, items: list) -> dict:

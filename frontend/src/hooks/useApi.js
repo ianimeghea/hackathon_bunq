@@ -75,11 +75,16 @@ export function useApi() {
     body: JSON.stringify({ receipt_id: receiptId, flatmate_emails: flatmateEmails }),
   }), [request]);
 
+  // sent payments
+  const getPayments = useCallback(() => request('/api/payments'), [request]);
+  const getPaymentStats = useCallback(() => request('/api/payments/stats'), [request]);
+
   return {
     loading, error, setError,
     uploadReceipt, confirmSplit, getReceipts, getReceipt, deleteReceipt, voiceCommand, getPreferences,
     initBunq, getBunqAccount, requestTestMoney,
     getFlatmates, addFlatmate, removeFlatmate,
     requestPayments,
+    getPayments, getPaymentStats,
   };
 }
